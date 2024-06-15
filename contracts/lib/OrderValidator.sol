@@ -98,9 +98,9 @@ contract OrderValidator is Executor, ZoneInteraction {
      *                          empty for single or "fulfill available").
      *
      * @return orderHash      The order hash.
-     * @return newNumerator   A value indicating the portion of the order that
+     * @return numerator   A value indicating the portion of the order that
      *                        will be filled.
-     * @return newDenominator A value indicating the total size of the order.
+     * @return denominator A value indicating the total size of the order.
      */
     function _validateOrderAndUpdateStatus(
         AdvancedOrder memory advancedOrder,
@@ -111,8 +111,8 @@ contract OrderValidator is Executor, ZoneInteraction {
         internal
         returns (
             bytes32 orderHash,
-            uint256 newNumerator,
-            uint256 newDenominator
+            uint256 numerator,
+            uint256 denominator
         )
     {
         // Retrieve the parameters for the order.
@@ -131,8 +131,8 @@ contract OrderValidator is Executor, ZoneInteraction {
         }
 
         // Read numerator and denominator from memory and place on the stack.
-        uint256 numerator = uint256(advancedOrder.numerator);
-        uint256 denominator = uint256(advancedOrder.denominator);
+        numerator = uint256(advancedOrder.numerator);
+        denominator = uint256(advancedOrder.denominator);
 
         // Ensure that the supplied numerator and denominator are valid.
         if (numerator > denominator || numerator == 0) {

@@ -145,49 +145,53 @@ contract ConduitController is ConduitControllerInterface {
         bool channelPreviouslyOpen = channelIndexPlusOne != 0;
 
         // If the channel has been set to open and was previously closed...
-        if (isOpen && !channelPreviouslyOpen) {
-            // Add the channel to the channels array for the conduit.
-            conduitProperties.channels.push(channel);
+        if (isOpen) {
+            if(!channelPreviouslyOpen) {
+                // Add the channel to the channels array for the conduit.
+                conduitProperties.channels.push(channel);
 
-            // Add new open channel length to associated mapping as index + 1.
-            conduitProperties.channelIndexesPlusOne[channel] = (
-                conduitProperties.channels.length
-            );
-        } else if (!isOpen && channelPreviouslyOpen) {
-            // Set a previously open channel as closed via "swap & pop" method.
-            // Decrement located index to get the index of the closed channel.
-            uint256 removedChannelIndex;
-
-            // Skip underflow check as channelPreviouslyOpen being true ensures
-            // that channelIndexPlusOne is nonzero.
-            unchecked {
-                removedChannelIndex = channelIndexPlusOne - 1;
-            }
-
-            // Use length of channels array to determine index of last channel.
-            uint256 finalChannelIndex = conduitProperties.channels.length - 1;
-
-            // If closed channel is not last channel in the channels array...
-            if (finalChannelIndex != removedChannelIndex) {
-                // Retrieve the final channel and place the value on the stack.
-                address finalChannel = (
-                    conduitProperties.channels[finalChannelIndex]
-                );
-
-                // Overwrite the removed channel using the final channel value.
-                conduitProperties.channels[removedChannelIndex] = finalChannel;
-
-                // Update final index in associated mapping to removed index.
-                conduitProperties.channelIndexesPlusOne[finalChannel] = (
-                    channelIndexPlusOne
+                // Add new open channel length to associated mapping as index + 1.
+                conduitProperties.channelIndexesPlusOne[channel] = (
+                    conduitProperties.channels.length
                 );
             }
+        } else {
+            if (channelPreviouslyOpen) {
+                // Set a previously open channel as closed via "swap & pop" method.
+                // Decrement located index to get the index of the closed channel.
+                uint256 removedChannelIndex;
 
-            // Remove the last channel from the channels array for the conduit.
-            conduitProperties.channels.pop();
+                // Skip underflow check as channelPreviouslyOpen being true ensures
+                // that channelIndexPlusOne is nonzero.
+                unchecked {
+                    removedChannelIndex = channelIndexPlusOne - 1;
+                }
 
-            // Remove the closed channel from associated mapping of indexes.
-            delete conduitProperties.channelIndexesPlusOne[channel];
+                // Use length of channels array to determine index of last channel.
+                uint256 finalChannelIndex = conduitProperties.channels.length - 1;
+
+                // If closed channel is not last channel in the channels array...
+                if (finalChannelIndex != removedChannelIndex) {
+                    // Retrieve the final channel and place the value on the stack.
+                    address finalChannel = (
+                        conduitProperties.channels[finalChannelIndex]
+                    );
+
+                    // Overwrite the removed channel using the final channel value.
+                    conduitProperties.channels[removedChannelIndex] = finalChannel;
+
+                    // Update final index in associated mapping to removed index.
+                    conduitProperties.channelIndexesPlusOne[finalChannel] = (
+                        channelIndexPlusOne
+                    );
+                }
+
+                // Remove the last channel from the channels array for the conduit.
+                conduitProperties.channels.pop();
+
+                // Remove the closed channel from associated mapping of indexes.
+                delete conduitProperties.channelIndexesPlusOne[channel];
+            }
         }
     }
 
@@ -256,9 +260,9 @@ contract ConduitController is ConduitControllerInterface {
     function acceptOwnership(address conduit) external override {
         // Ensure that the conduit in question exists.
         _assertConduitExists(conduit);
-
+        ConduitProperties storage conduitProperties = _conduits[conduit];
         // If caller does not match current potential owner of the conduit...
-        if (msg.sender != _conduits[conduit].potentialOwner) {
+        if (msg.sender != conduitProperties.potentialOwner) {
             // Revert, indicating that caller is not current potential owner.
             revert CallerIsNotNewPotentialOwner(conduit);
         }
@@ -267,17 +271,17 @@ contract ConduitController is ConduitControllerInterface {
         emit PotentialOwnerUpdated(address(0));
 
         // Clear the current new potential owner from the conduit.
-        _conduits[conduit].potentialOwner = address(0);
+        conduitProperties.potentialOwner = address(0);
 
         // Emit an event indicating conduit ownership has been transferred.
         emit OwnershipTransferred(
             conduit,
-            _conduits[conduit].owner,
+            conduitProperties.owner,
             msg.sender
         );
 
         // Set the caller as the owner of the conduit.
-        _conduits[conduit].owner = msg.sender;
+        conduitProperties.owner = msg.sender;
     }
 
     /**
